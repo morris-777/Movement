@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 4911097650018151876}
   - component: {fileID: 4911097650018151903}
   - component: {fileID: 4911097650018151896}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Player
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -113,9 +113,19 @@ MonoBehaviour:
   maxSpeed: 10
   maxAcceleration: 10
   maxAirAcceleration: 1
+  maxSnapSpeed: 100
   jumpHeight: 2
-  maxAirJumps: 0
+  maxAirJumps: 1
+  wallJumpsEnabled: 1
   maxGroundAngle: 40
+  maxStairsAngle: 50
+  probeDistance: 3
+  probeMask:
+    serializedVersion: 2
+    m_Bits: 179
+  stairsMask:
+    serializedVersion: 2
+    m_Bits: 128
 --- !u!54 &4911097650018151903
 Rigidbody:
   m_ObjectHideFlags: 0
