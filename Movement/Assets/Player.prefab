@@ -110,8 +110,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 09175a85fd8e71343a8023ed94b3a194, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxSpeed: 10
-  maxAcceleration: 10
+  maxSpeed: 6.6
+  maxAcceleration: 100
   maxAirAcceleration: 1
   maxSnapSpeed: 100
   jumpHeight: 2
@@ -126,6 +126,7 @@ MonoBehaviour:
   stairsMask:
     serializedVersion: 2
     m_Bits: 128
+  playerInputSpace: {fileID: 0}
 --- !u!54 &4911097650018151903
 Rigidbody:
   m_ObjectHideFlags: 0

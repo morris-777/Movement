@@ -30,7 +30,11 @@ class OrbitCamera : MonoBehaviour {
 	float minVerticalAngle = -30f, maxVerticalAngle = 60f;
 
 	Vector3 focusPoint, previousFocusPoint;
+
 	Vector2 orbitAngles = new Vector2(45f, 0f);
+	Quaternion gravityAlignment = Quaternion.identity;
+	Quaternion orbitRotation;
+	
 	float lastManualRotationTime;
 
 	Camera regularCamera;
@@ -49,7 +53,7 @@ class OrbitCamera : MonoBehaviour {
 	void Awake () {
 		regularCamera = GetComponent<Camera>();
 		focusPoint = focus.position;
-		transform.localRotation = Quaternion.Euler(orbitAngles);
+		transform.localRotation = orbitRotation = Quaternion.Euler(orbitAngles);
 	}
 
 	void OnValidate () {
@@ -59,16 +63,15 @@ class OrbitCamera : MonoBehaviour {
 	}
 
 	void LateUpdate () {
+		gravityAlignment = Quaternion.FromToRotation(gravityAlignment * Vector3.up, CustomGravity.GetUpAxis(focusPoint)) * gravityAlignment; // Create a rotation from current up to gravity up, then add that rotation to current up
 		UpdateFocusPoint();
 		
-		Quaternion lookRotation;
 		if (ManualRotation() || AutomaticRotation()) {
 			ConstrainAngles();
-			lookRotation = Quaternion.Euler(orbitAngles);
+			orbitRotation = Quaternion.Euler(orbitAngles);
 		}
-		else {
-			lookRotation = transform.localRotation;
-		}
+
+		Quaternion lookRotation = gravityAlignment * orbitRotation; // Add gravity alignment to orbit rotation
 
 		Vector3 lookDirection = lookRotation * Vector3.forward;
 		Vector3 lookPosition = focusPoint - lookDirection * distance;
@@ -132,10 +135,9 @@ class OrbitCamera : MonoBehaviour {
 			return false;
 		}
 
-		Vector2 movement = new Vector2(
-			focusPoint.x - previousFocusPoint.x, 
-			focusPoint.z - previousFocusPoint.z
-		);
+		Vector3 alignedDelta = Quaternion.Inverse(gravityAlignment) * (focusPoint - previousFocusPoint);
+
+		Vector2 movement = new Vector2(alignedDelta.x, alignedDelta.z);
 
 		float movementDeltaSqr = movement.sqrMagnitude;
 
