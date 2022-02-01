@@ -26,7 +26,7 @@ class MovingSphere : MonoBehaviour {
 	[SerializeField]
 	Transform playerInputSpace = default;
 
-	Vector3 velocity, desiredVelocity;
+	Vector3 velocity, desiredVelocity, connectionVelocity;
 
 	Vector3 contactNormal, steepNormal;
 
@@ -41,7 +41,9 @@ class MovingSphere : MonoBehaviour {
 	bool desiredJump;
 	int jumpPhase;
 
-	Rigidbody body;
+	Rigidbody body, connectedBody, previousConnectedBody;
+
+	Vector3 connectionWorldPosition, connectionLocalPosition;
 
 	float minGroundDotProduct, minStairsDotProduct;
 
@@ -75,6 +77,12 @@ class MovingSphere : MonoBehaviour {
 
 		desiredJump |= Input.GetButtonDown("Jump"); // Will only change to true -- equivalent to desiredJump = desiredJump || Input.Etcetera
 
+		if (connectedBody) {
+			if (connectedBody.isKinematic || connectedBody.mass >= body.mass) {
+				UpdateConnectionState();
+			}
+		}
+
 		GetComponent<Renderer>().material.SetColor(
 			"_Color", Color.white * (OnGround || OnSteep ? 0f : 1f)
 		); // Debug coloration
@@ -99,7 +107,9 @@ class MovingSphere : MonoBehaviour {
 
 	void ClearState () {
 		groundContactCount = steepContactCount = 0;
-		contactNormal = steepNormal = Vector3.zero;
+		contactNormal = steepNormal = connectionVelocity = Vector3.zero;
+		previousConnectedBody = connectedBody;
+		connectedBody = null;
 	}
 
 	void UpdateState () {
@@ -118,6 +128,15 @@ class MovingSphere : MonoBehaviour {
 		else {
 			contactNormal = upAxis;
 		}
+	}
+
+	void UpdateConnectionState () {
+		if (connectedBody == previousConnectedBody) {
+			Vector3 connectionMovement = connectedBody.transform.TransformPoint(connectionLocalPosition) - connectionWorldPosition;
+			connectionVelocity = connectionMovement / Time.deltaTime;
+		}
+		connectionWorldPosition = body.position;
+		connectionLocalPosition = connectedBody.transform.InverseTransformPoint(connectionWorldPosition); // Transforms point from world space to local space
 	}
 
 	void Jump (Vector3 gravity) {
@@ -159,8 +178,10 @@ class MovingSphere : MonoBehaviour {
 		Vector3 xAxis = ProjectDirectionOnPlane(rightAxis, contactNormal).normalized;
 		Vector3 zAxis = ProjectDirectionOnPlane(forwardAxis, contactNormal).normalized;
 
-		float currentX = Vector3.Dot(velocity, xAxis); // Length of x axis is always one, so no need to divide! Just projects current velocity onto new axis
-		float currentZ = Vector3.Dot(velocity, zAxis);
+		Vector3 relativeVelocity = velocity - connectionVelocity;
+
+		float currentX = Vector3.Dot(relativeVelocity, xAxis); // Length of x axis is always one, so no need to divide! Just projects current velocity onto new axis
+		float currentZ = Vector3.Dot(relativeVelocity, zAxis);
 
 		float acceleration = OnGround ? maxAcceleration : maxAirAcceleration;
 		float maxSpeedChange = acceleration * Time.deltaTime;
@@ -195,7 +216,9 @@ class MovingSphere : MonoBehaviour {
 			velocity = (velocity - hit.normal * dot).normalized * speed;
 		}
 
-		Debug.Log("Snapping to ground");
+		connectedBody = hit.rigidbody;
+
+		//Debug.Log("Snapping to ground");
 
 		return true;
 	}
@@ -234,10 +257,14 @@ class MovingSphere : MonoBehaviour {
 			if (upDot >= minDot) {
 				groundContactCount += 1;
 				contactNormal += normal;
+				connectedBody = collision.rigidbody;
 			}
 			else if (upDot > -0.01f) {
 				steepContactCount += 1;
 				steepNormal += normal;
+				if (groundContactCount == 0) {
+					connectedBody = collision.rigidbody;
+				}
 			}
 		}
 	}
